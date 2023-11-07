@@ -1,0 +1,137 @@
+x-customizable-image: &customizable_image
+  # 默认情况下，使用的镜像只包含'frappe'和'erpnext'应用程序。
+  # 参考 https://github.com/frappe/frappe_docker/blob/main/docs/custom-apps.md
+  # 关于自定义镜像的内容。
+  image: ${IMAGE:?No image set}:${VERSION:?No ERP version set}
+
+x-backend-defaults: &backend_defaults
+  <<: *customizable_image
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+
+x-networks: &networks
+  networks:
+    - swarm_prod
+
+services:
+  db:
+    <<: *networks
+    image: mariadb:10.6
+    healthcheck:
+      test: mysqladmin ping -h localhost --password=${DB_PASSWORD:-root}
+      interval: 1s
+      retries: 15
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed # MariaDB 10.6的临时修复
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+    ports:
+      - "63306:3306" # 暴露数据库端口，以便于对数据库进行直接操作
+    volumes:
+      - db-data:/var/lib/mysql
+
+  backend:
+    <<: [*backend_defaults, *networks]
+    deploy:
+      mode: replicated
+      replicas: 3
+
+  frontend:
+    <<: [*customizable_image, *networks]
+    deploy:
+      mode: replicated
+      replicas: 3
+    command:
+      - nginx-entrypoint.sh
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: ${FRAPPE_SITE_NAME_HEADER:-$$host}
+      UPSTREAM_REAL_IP_ADDRESS: ${UPSTREAM_REAL_IP_ADDRESS:-127.0.0.1}
+      UPSTREAM_REAL_IP_HEADER: ${UPSTREAM_REAL_IP_HEADER:-X-Forwarded-For}
+      UPSTREAM_REAL_IP_RECURSIVE: ${UPSTREAM_REAL_IP_RECURSIVE:-off}
+      PROXY_READ_TIMOUT: ${PROXY_READ_TIMOUT:-120}
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-50m}
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+    depends_on:
+      - backend
+      - websocket
+
+  websocket:
+    <<: [*customizable_image, *networks]
+    deploy:
+      mode: replicated
+      replicas: 3
+    command:
+      - websocket-entrypoint.sh
+      - websocket-entrypoint.sh
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+
+  queue-short:
+    <<: [*backend_defaults, *networks]
+    command: bench worker --queue short
+
+  queue-default:
+    <<: [*backend_defaults, *networks]
+    command: bench worker --queue default
+
+  queue-long:
+    <<: [*backend_defaults, *networks]
+    command: bench worker --queue long
+
+  scheduler:
+    <<: [*backend_defaults, *networks]
+    command: bench schedule
+
+  redis-queue:
+    <<: *networks
+    image: redis:6.2-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - redis-queue-data:/data
+
+  redis-cache:
+    <<: *networks
+    image: redis:6.2-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - redis-cache-data:/data
+
+  redis-socketio:
+    <<: *networks
+    image: redis:6.2-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - redis-socketio-data:/data
+
+networks:
+  swarm_prod:
+    external: true
+
+# ERPNext需要访问本地资源(Frappe不需要)
+volumes:
+  sites:
+    driver_opts:
+      type: "nfs4"
+      o: "addr=${NFS_SERVER:-No NFS Server set},rw,noatime,rsize=8192,wsize=8192,tcp,timeo=14"
+      device: ":/erp/sites"
+  db-data:
+  redis-queue-data:
+  redis-cache-data:
+  redis-socketio-data:
