@@ -1,7 +1,7 @@
 x-customizable-image: &customizable_image
-  # By default the image used only contains the `frappe` and `erpnext` apps.
-  # See https://github.com/frappe/frappe_docker/blob/main/docs/custom-apps.md
-  # about using custom images.
+  # 默认情况下，使用的镜像只包含'frappe'和'erpnext'应用程序。
+  # 参考 https://github.com/frappe/frappe_docker/blob/main/docs/custom-apps.md
+  # 关于自定义镜像的内容。
   image: ${IMAGE:?No image set}:${VERSION:?No ERP version set}
 
 x-depends-on-configurator: &depends_on_configurator
@@ -18,7 +18,7 @@ services:
   db:
     image: mariadb:10.6
     healthcheck:
-      test: mysqladmin ping -h localhost --password=admin
+      test: mysqladmin ping -h localhost --password=${DB_PASSWORD:-root}
       interval: 1s
       retries: 15
     deploy:
@@ -28,9 +28,11 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --skip-character-set-client-handshake
-      - --skip-innodb-read-only-compressed # Temporary fix for MariaDB 10.6
+      - --skip-innodb-read-only-compressed # MariaDB 10.6的临时修复
     environment:
-      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+    ports:
+      - "63306:3306" # 暴露数据库端口，以便于对数据库进行直接操作
     volumes:
       - db-data:/var/lib/mysql
       
@@ -39,11 +41,11 @@ services:
     command:
       - configurator-entrypoint.sh
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      REDIS_CACHE: ${REDIS_CACHE}
-      REDIS_QUEUE: ${REDIS_QUEUE}
-      REDIS_SOCKETIO: ${REDIS_SOCKETIO}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      REDIS_CACHE: ${REDIS_CACHE:-redis-cache:6379}
+      REDIS_QUEUE: ${REDIS_QUEUE:-redis-queue:6379}
+      REDIS_SOCKETIO: ${REDIS_SOCKETIO:-redis-socketio:6379}
       SOCKETIO_PORT: 9000
     depends_on: {}
 
@@ -63,6 +65,8 @@ services:
       UPSTREAM_REAL_IP_RECURSIVE: ${UPSTREAM_REAL_IP_RECURSIVE:-off}
       PROXY_READ_TIMOUT: ${PROXY_READ_TIMOUT:-120}
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-50m}
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
     volumes:
       - sites:/home/frappe/frappe-bench/sites
     depends_on:
@@ -117,10 +121,10 @@ services:
     volumes:
       - redis-socketio-data:/data
 
-# ERPNext requires local assets access (Frappe does not)
+# ERPNext需要访问本地资源(Frappe不需要)
 volumes:
-  db-data:
   sites:
+  db-data:
   redis-queue-data:
   redis-cache-data:
   redis-socketio-data:

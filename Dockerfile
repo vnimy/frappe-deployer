@@ -1,4 +1,6 @@
-FROM ccr.ccs.tencentyun.com/vnimy/frappe-builder:latest as builder
+ARG DOCKER_REGISTRY=ccr.ccs.tencentyun.com
+ARG DOCKER_NAMESPACE=vnimy
+FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-builder:latest as builder
 
 # apps.json includes
 ARG APPS_JSON_BASE64
@@ -37,7 +39,7 @@ RUN \
   echo "{}" > sites/common_site_config.json && \
   find apps -mindepth 1 -path "*/.git" | xargs rm -fr
 
-FROM ccr.ccs.tencentyun.com/vnimy/frappe-base:latest as erpnext
+FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-base:latest as erpnext
 
 
 COPY resources/nginx-template.conf /templates/nginx/frappe.conf.template

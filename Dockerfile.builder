@@ -1,4 +1,6 @@
-FROM ccr.ccs.tencentyun.com/vnimy/frappe-base:latest AS builder
+ARG DOCKER_REGISTRY=ccr.ccs.tencentyun.com
+ARG DOCKER_NAMESPACE=vnimy
+FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-base:latest AS builder
 
 COPY resources/nginx-template.conf /templates/nginx/frappe.conf.template
 COPY resources/nginx-entrypoint.sh /usr/local/bin/nginx-entrypoint.sh
@@ -25,7 +27,4 @@ RUN apt-get update \
     gcc \
     build-essential \
     libbz2-dev \
-    # 中文字体
-    ttf-wqy-zenhei \
-    ttf-wqy-microhei \
     && rm -rf /var/lib/apt/lists/*
