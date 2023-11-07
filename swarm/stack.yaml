@@ -40,13 +40,13 @@ services:
     <<: [*backend_defaults, *networks]
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: ${DEPLOY_REPLICAS:-3}
 
   frontend:
     <<: [*customizable_image, *networks]
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: ${DEPLOY_REPLICAS:-3}
     command:
       - nginx-entrypoint.sh
     environment:
@@ -70,7 +70,7 @@ services:
     <<: [*customizable_image, *networks]
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: ${DEPLOY_REPLICAS:-3}
     command:
       - websocket-entrypoint.sh
       - websocket-entrypoint.sh
@@ -130,7 +130,7 @@ volumes:
     driver_opts:
       type: "nfs4"
       o: "addr=${NFS_SERVER:-No NFS Server set},rw,noatime,rsize=8192,wsize=8192,tcp,timeo=14"
-      device: ":/erp/sites"
+      device: ":${NFS_SITES_PATH:-/sites}"
   db-data:
   redis-queue-data:
   redis-cache-data:

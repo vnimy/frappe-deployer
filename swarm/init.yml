@@ -20,4 +20,4 @@ volumes:
     driver_opts:
       type: "nfs4"
       o: "addr=${NFS_SERVER:-No NFS Server set},rw,noatime,rsize=8192,wsize=8192,tcp,timeo=14"
-      device: ":/erp/sites"
+      device: ":${NFS_SITES_PATH:-/sites}"

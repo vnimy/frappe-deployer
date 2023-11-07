@@ -9,17 +9,23 @@
       - [相关命令](#相关命令)
     - [构建生产镜像](#构建生产镜像)
   - [部署](#部署)
-    - [首次安装](#首次安装)
+    - [Docker Compose 单机部署](#docker-compose-单机部署)
       - [准备部署目录](#准备部署目录)
       - [启动ERP服务](#启动erp服务)
       - [新建站点](#新建站点)
-    - [更新服务](#更新服务)
-    - [使用外部数据库](#使用外部数据库)
+      - [更新服务](#更新服务)
     - [Docker Swarm 集群部署](#docker-swarm-集群部署)
+      - [要求](#要求)
       - [配置Docker Swarm](#配置docker-swarm)
       - [准备部署目录](#准备部署目录-1)
+      - [配置NFS服务器](#配置nfs服务器)
+      - [了解`deploy.sh`命令](#了解deploysh命令)
+      - [初始化全局配置](#初始化全局配置)
       - [启动ERP集群](#启动erp集群)
-      - [进入后端容器](#进入后端容器)
+      - [新建站点](#新建站点-1)
+      - [更新服务](#更新服务-1)
+    - [其他](#其他)
+      - [使用外部数据库](#使用外部数据库)
 
 
 # 部署说明
@@ -171,7 +177,7 @@
 
 ## 部署
 
-### 首次安装
+### Docker Compose 单机部署
 
 #### 准备部署目录
 
@@ -201,12 +207,17 @@ docker-compose up -d -V
 
 1. 新建站点
     ```shell
-    bench new-site {站点域名} --mariadb-root-password {数据库管理员密码} --admin-password {管理员登陆密码} --no-mariadb-socket
+    docker-compose exec backend \
+      bench new-site {站点域名} \
+      --mariadb-root-password {数据库管理员密码} \
+      --admin-password {管理员登陆密码} \
+      --no-mariadb-socket
     ```
 
 2. 为站点安装应用
     ```shell
-    bench --site {站点域名} install-app \
+    docker-compose exec backend \
+      bench --site {站点域名} install-app \
       erpnext \
       erpnext_chinese \
       erpnext_oob \
@@ -214,36 +225,30 @@ docker-compose up -d -V
     ```
     **注意:** 请确保需要安装的应用已经存在ERP镜像中
 
-### 更新服务
+#### 更新服务
 
-1. 拉取最新镜像
+1. 修改`.env`的镜像版本
+
+2. 拉取最新镜像
     ```shell
     docker-compose pull backend
     ```
 
-2. 重新创建ERP服务
+3. 重新创建ERP服务
     ```shell
     docker-compose up -d -V
     ```
 
-3. 当更新的版本涉及到字段变动时，需要进行一次合并操作
+4. 当更新的版本涉及到字段变动时，需要进行一次合并操作
     ```shell
     docker-compose exec backend --site {站点域名} migrate
     ```
 
-### 使用外部数据库
-  修改`.env`文件，设置`DB_HOST`、`DB_PORT`以及`DB_PASSWORD`
-  ```properties
-  # 数据库主机
-  DB_HOST=192.168.200.10
-  # 数据库端口
-  DB_PORT=3306
-  # 数据库root密码
-  DB_PASSWORD=root
-  ```
-  **注意：** 只能使用**MariaDB**
-
 ### Docker Swarm 集群部署
+
+#### 要求
+- Docker Swarm
+- NFS服务
 
 #### 配置Docker Swarm
 1. 初始化Docker Swarm
@@ -286,20 +291,61 @@ docker-compose up -d -V
 
    修改`.env`文件，设置ERP的`镜像名称(IMAGE)`、`镜像版本(VERSION)`、`访问端口(FRONTEND_PORT)`、`NFS服务器(NFS_SERVER)`
 
-3. 初次部署配置
-    执行`configurator.sh`来生成sites目录信息，并且等待容器完成后正常退出
-    ```shell
-    ./configurator.sh
+    ```properties
+    # 镜像名称
+    IMAGE=ccr.ccs.tencentyun.com/vnimy/erp
+    # 镜像版本
+    VERSION=version-15.231107
+    # ERP访问端口
+    FRONTEND_PORT=8080
     ```
 
-#### 启动ERP集群
-```shell
-./run.sh erp
+#### 配置NFS服务器
+NFS服务用于sites的持久化，所有需要用到sites的目录都需要挂在存储在NFS中的sites目录
+修改`.env`文件，设置`NFS服务器(NFS_SERVER)`
+
+```properties
+# NFS设置，用于持久化sites目录
+NFS_SERVER=192.168.200.88
+# sites目录在NFS的位置
+NFS_SITES_PATH=/erp/sites
 ```
 
-通过输入`docker stack services erp`命令来查看服务启动情况，确认`REPLICAS`全部正常
+#### 了解`deploy.sh`命令
+>     用法：
+>       <命令> [选项]
+>     
+>     命令：
+>       help                    帮助
+>       version                 查看当前镜像版本
+>       ps                      查看任务列表
+>       services                查看服务列表
+>       init                    初始化全局配置
+>       start                   启动服务
+>       restart                 重启服务
+>       down                    关闭服务
+>       update [版本]           更新到指定版本，如不指定版本则使用当前版本进行更新服务
+>       migrate [站点域名]      合并指定站点
+>       scale [实例数]          将backend、frontend、websocket服务的实例调整到指定数量
+>       port                    设置前端端口号，默认：8080
+>       port [端口]             设置前端端口号
+>       attach                  进入backend容器终端
+
+#### 初始化全局配置
+第一次运行服务前需要先初始化服务配置，用于生成sites目录的必要文件
 ```shell
-root@ubuntu:~/docker/erp# docker stack services erp
+./deploy.sh init
+```
+
+#### 启动ERP集群
+
+```shell
+./deploy.sh start
+```
+
+通过输入`./deploy.sh services`命令来查看服务启动情况，确认`REPLICAS`全部正常
+```shell
+root@ubuntu:~/docker/erp# ./deploy.sh services
 ID             NAME                 MODE         REPLICAS   IMAGE                                                PORTS
 ij5j7yr0jvim   erp_backend          replicated   3/3        ccr.ccs.tencentyun.com/vnimy/erp:version-15.231107
 r3iuc82t5fc8   erp_db               replicated   1/1        mariadb:10.6                                         *:63306->3306/tcp
@@ -314,11 +360,53 @@ tpw6s0gslqgi   erp_redis-socketio   replicated   1/1        redis:6.2-alpine
 j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.com/vnimy/erp:version-15.231107
 ```
 
-#### 进入后端容器
-通过`docker stack ps erp | grep backend`命令查看backend服务的容器列表
-```shell
-root@ubuntu:~/docker/erp# docker stack ps erp | grep backend
-l400rrkwhajn   erp_backend.1          ccr.ccs.tencentyun.com/vnimy/erp:version-15.231107   ubuntu    Running         Running 14 minutes ago       
-bt4ohogs64hc   erp_backend.2          ccr.ccs.tencentyun.com/vnimy/erp:version-15.231107   ubuntu    Running         Running 14 minutes ago       
-exw32k4h9ctz   erp_backend.3          ccr.ccs.tencentyun.com/vnimy/erp:version-15.231107   ubuntu    Running         Running 14 minutes ago
-```
+#### 新建站点
+
+1. 进入backend容器
+    ```shell
+    ./deploy.sh attach
+    ```
+    进入backend容器后可使用bench命令进行新建站点、安装应用、更新站点等操作
+
+2. 新建站点
+    ```shell
+    bench new-site {站点域名} \
+      --mariadb-root-password {数据库管理员密码} \
+      --admin-password {管理员登陆密码} \
+      --no-mariadb-socket
+    ```
+
+3. 为站点安装应用
+    ```shell
+    bench --site {站点域名} install-app \
+      erpnext \
+      erpnext_chinese \
+      erpnext_oob \
+      {...更多应用}
+    ```
+    **注意:** 请确保需要安装的应用已经存在ERP镜像中
+
+#### 更新服务
+
+1. 执行更新命令
+    ```shell
+    ./deploy.sh update {版本号}
+    ```
+
+4. 当更新的版本涉及到字段变动时，需要进行一次合并操作
+    ```shell
+    ./deploy.sh migrate {站点域名}
+    ```
+
+### 其他
+#### 使用外部数据库
+  修改`.env`文件，设置`DB_HOST`、`DB_PORT`以及`DB_PASSWORD`
+  ```properties
+  # 数据库主机
+  DB_HOST=192.168.200.10
+  # 数据库端口
+  DB_PORT=3306
+  # 数据库root密码
+  DB_PASSWORD=root
+  ```
+  **注意：** 只能使用**MariaDB**
