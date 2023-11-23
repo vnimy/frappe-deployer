@@ -11,7 +11,7 @@ RUN if [ -n "${APPS_JSON_BASE64}" ]; then \
 USER frappe
 
 ARG FRAPPE_BRANCH=version-15
-ARG FRAPPE_PATH=https://github.com/frappe/frappe
+ARG FRAPPE_REPO=https://github.com/frappe/frappe
 # ARG ERPNEXT_REPO=https://github.com/frappe/erpnext
 # ARG ERPNEXT_BRANCH=version-15
 RUN \
@@ -28,7 +28,7 @@ RUN \
   fi && \
   bench init ${APP_INSTALL_ARGS}\
   --frappe-branch=${FRAPPE_BRANCH} \
-  --frappe-path=${FRAPPE_PATH} \
+  --frappe-path=${FRAPPE_REPO} \
   --no-procfile \
   --no-backups \
   --skip-redis-config-generation \
