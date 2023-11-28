@@ -499,7 +499,7 @@ function build_custom() {
     --build-arg=CUSTOM_APP_REPO=$CUSTOM_APP_REPO \
     --build-arg=CUSTOM_APP_NAME=$CUSTOM_APP_NAME \
     --tag=$IMAGE \
-    --file=Dockerfile.custom $CACHE_ARG .
+    --file=Dockerfile.custom --no-cache .
 
   echo "构建完成"
 
