@@ -6,6 +6,8 @@ set -e
 DEFAULT_REGISTRY=ccr.ccs.tencentyun.com
 DEFAULT_NAMESPACE=vnimy
 DEFAULT_MAIN_VERSION=version-14
+# 默认自定镜像主版本
+DEFAULT_CUSTOM_MAIN_VERSION=version-14
 DEFAULT_FRAPPE_REPO=https://gitee.com/mirrors/frappe.git
 DEFAULT_ERPNEXT_REPO=https://gitee.com/mirrors/erpnext.git
 DEFAULT_ERPNEXT_CHINESE_REPO=https://gitee.com/yuzelin/erpnext_chinese.git
@@ -27,9 +29,13 @@ function show_usage() {
       help                    帮助
       base [选项]             构建基础镜像
       builder [选项]          构建builder镜像
-      builder-oob [选项]      构建builder-oob镜像
-      custom [选项]           构建自定义APP镜像
-      backend [选项]          构建后端镜像
+      backend [选项]          构建后端镜像。该命令将基于最新的代码进行构建镜像，该操作将
+                              无法固定Frappe、ERPNext的版本。
+      builder-oob [选项]      构建builder-oob镜像。该命令用于构建指定版本的基础镜像，并
+                              用于后续基于该镜像快速构建自定义镜像，该操作可固定Frappe、
+                              ERPNext的版本。
+      custom [选项]           构建自定义APP镜像。在基于builder-oob命令构建出来的镜像的
+                              基础上添加自定以APP。
       [镜像] [-h | --help]    镜像构建帮助
       get-default             查看当前构建默认值
       set-default [选项]      设置构建默认值
@@ -38,10 +44,11 @@ function show_usage() {
                                 镜像注册中心          registry
                                 镜像命名空间          namespace
                                 主版本                main_version
-                                Frappe仓库            frappe_path
-                                ERPNext仓库           erpnext_path
-                                ERPNext Chinese仓库   erpnext_chinese_path
-                                ERPNext OOB仓库       erpnext_oob_path";
+                                自定义镜像主版本       custom_main_version
+                                Frappe仓库            frappe_repo
+                                ERPNext仓库           erpnext_repo
+                                ERPNext Chinese仓库   erpnext_chinese_repo
+                                ERPNext OOB仓库       erpnext_oob_repo";
 }
 
 function show_backend_usage() {
@@ -70,9 +77,13 @@ function show_custom_usage() {
       -h,--help                         帮助
       -r,--registry [registry]          镜像注册中心，默认：$DEFAULT_REGISTRY
       -n,--namespace [namespace]        镜像注册中心的命名空间，默认：$DEFAULT_NAMESPACE
-      -v,--version [version]            主版本，默认：$DEFAULT_MAIN_VERSION
+      -v,--version [version]            基础镜像版本，默认：$DEFAULT_CUSTOM_MAIN_VERSION
       -i,--image [name]                 镜像名称，不包含标签，默认：$DEFAULT_NAMESPACE/$DEFAULT_IMAGE_NAME
-      -t,--tag [name]                   镜像标签，默认：$DEFAULT_MAIN_VERSION.$(date '+%y%m%d')
+      -t,--tag [name]                   镜像标签，默认：$DEFAULT_CUSTOM_MAIN_VERSION.$(date '+%y%m%d')
+      -f,--app-file [file]              自定义应用配置文件，一行一个APP，该配置优先于app-branch,app-repo,app-name参数
+                                        例子 custom.txt：
+                                            app-name1,app-repo1,app-branch1
+                                            app-name2,app-repo2,app-branch2
          --app-branch [branch]          自定义应用分支名称，默认：master
          --app-repo [repo]              自定义应用仓库地址
          --app-name [name]              自定义应用名称";
@@ -235,6 +246,8 @@ function build_builder_oob() {
   CACHE_ARG=--no-cache
 
   MAIN_VERSION=$DEFAULT_MAIN_VERSION
+  DATE_VERSION=$(date '+%y%m%d')
+  TAG=$MAIN_VERSION.$DATE_VERSION
 
   FRAPPE_REPO=$DEFAULT_FRAPPE_REPO
   ERPNEXT_REPO=$DEFAULT_ERPNEXT_REPO
@@ -299,7 +312,7 @@ function build_builder_oob() {
         ;;
   esac done
 
-  IMAGE=${REGISTRY}/${NAMESPACE}/frappe-builder-oob:${MAIN_VERSION}
+  IMAGE=${REGISTRY}/${NAMESPACE}/frappe-builder-oob:${TAG}
   echo "开始构建镜像：$IMAGE"
 
   docker build \
@@ -316,11 +329,11 @@ function build_builder_oob() {
     --tag=$IMAGE \
     --file=Dockerfile.builder-oob $CACHE_ARG .
 
-  echo "构建完成"
+  echo "构建完成 $IMAGE"
 
   if [ $? -eq 0 ]; then
     docker push $IMAGE
-    echo "推送完成"
+    echo "推送完成 $IMAGE"
   fi
 }
 
@@ -418,7 +431,7 @@ function build_backend() {
 }
 
 function build_custom() {
-  MAIN_VERSION=$DEFAULT_MAIN_VERSION
+  MAIN_VERSION=$DEFAULT_CUSTOM_MAIN_VERSION
   DATE_VERSION=$(date '+%y%m%d')
   TAG=$MAIN_VERSION.$DATE_VERSION
   NAMESPACE=$DEFAULT_NAMESPACE
@@ -428,9 +441,10 @@ function build_custom() {
   CUSTOM_APP_BRANCH=master
   CUSTOM_APP_REPO=""
   CUSTOM_APP_NAME=""
+  CUSTOM_APPS=""
 
 
-  ARGS=`getopt -o hr:n:i:t:v: -al help,registry:,namespace:,image:,tag:,version:,app-branch:,app-repo:,app-name: -- "$@"`
+  ARGS=`getopt -o hr:n:i:t:v:f: -al help,registry:,namespace:,image:,tag:,version:,app-branch:,app-repo:,app-name:,app-file: -- "$@"`
   if [ $? != 0 ];then
     echo "Terminating..."
     exit 1
@@ -474,6 +488,12 @@ function build_custom() {
         CUSTOM_APP_NAME=$2
         shift 2
         ;;
+      -f|--app-file)
+        if [ -e $2 ]; then
+          CUSTOM_APPS=$(cat $2)
+        fi
+        shift 2
+        ;;
       -h|--help)
         show_custom_usage
         exit 0
@@ -488,16 +508,21 @@ function build_custom() {
         ;;
   esac done
 
+  if [ ! -n "${CUSTOM_APPS}" ]; then
+    if [ -n "${CUSTOM_APP_REPO}" ]; then
+      CUSTOM_APPS="${CUSTOM_APP_NAME},${CUSTOM_APP_REPO},${CUSTOM_APP_BRANCH:-"master"}"
+    elif [ -e "custom.txt" ]; then
+      CUSTOM_APPS=$(cat "custom.txt")
+    fi
+  fi
+
   IMAGE=${REGISTRY}/${IMAGE_NAME}:${TAG}
   echo "开始构建镜像：$IMAGE"
-
   docker build \
     --build-arg=DOCKER_REGISTRY=$REGISTRY \
     --build-arg=DOCKER_NAMESPACE=$NAMESPACE \
     --build-arg=MAIN_VERSION=$MAIN_VERSION \
-    --build-arg=CUSTOM_APP_BRANCH=$CUSTOM_APP_BRANCH \
-    --build-arg=CUSTOM_APP_REPO=$CUSTOM_APP_REPO \
-    --build-arg=CUSTOM_APP_NAME=$CUSTOM_APP_NAME \
+    --build-arg=CUSTOM_APPS=$CUSTOM_APPS \
     --tag=$IMAGE \
     --file=Dockerfile.custom --no-cache .
 
@@ -513,6 +538,7 @@ function get_default() {
   echo -e "registry: $DEFAULT_REGISTRY
 namespace: $DEFAULT_NAMESPACE
 main_version: $DEFAULT_MAIN_VERSION
+custom_main_version: $DEFAULT_CUSTOM_MAIN_VERSION
 frappe_repo: $DEFAULT_FRAPPE_REPO
 erpnext_repo: $DEFAULT_ERPNEXT_REPO
 erpnext_chinese_repo: $DEFAULT_ERPNEXT_CHINESE_REPO
@@ -533,6 +559,9 @@ function set_default() {
       "main_version")
       DEFAULT_MAIN_VERSION=${arr[1]}
       ;;
+      "custom_main_version")
+      DEFAULT_CUSTOM_MAIN_VERSION=${arr[1]}
+      ;;
       "frappe_repo")
       DEFAULT_FRAPPE_REPO=${arr[1]}
       ;;
@@ -550,6 +579,7 @@ function set_default() {
   echo -e "DEFAULT_REGISTRY=$DEFAULT_REGISTRY
 DEFAULT_NAMESPACE=$DEFAULT_NAMESPACE
 DEFAULT_MAIN_VERSION=$DEFAULT_MAIN_VERSION
+DEFAULT_CUSTOM_MAIN_VERSION=$DEFAULT_CUSTOM_MAIN_VERSION
 DEFAULT_FRAPPE_REPO=$DEFAULT_FRAPPE_REPO
 DEFAULT_ERPNEXT_REPO=$DEFAULT_ERPNEXT_REPO
 DEFAULT_ERPNEXT_CHINESE_REPO=$DEFAULT_ERPNEXT_CHINESE_REPO

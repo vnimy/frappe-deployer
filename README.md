@@ -7,7 +7,8 @@
       - [设置构建默认值](#设置构建默认值)
     - [构建基础镜像](#构建基础镜像)
       - [相关命令](#相关命令)
-    - [构建生产镜像](#构建生产镜像)
+    - [构建生产镜像(非固定版本)](#构建生产镜像非固定版本)
+    - [构建生产镜像(固定版本)](#构建生产镜像固定版本)
   - [部署](#部署)
     - [Docker Compose 单机部署](#docker-compose-单机部署)
       - [准备部署目录](#准备部署目录)
@@ -78,18 +79,28 @@
 >     
 >     命令：
 >       help                    帮助
->       base                    打包基础镜像
->       builder                 打包builder> 镜像
->       backend [选项]          打包后端镜像
->       backend [-h | --help]   后端镜像打包帮助
+>       base [选项]             构建基础镜像
+>       builder [选项]          构建builder镜像
+>       backend [选项]          构建后端镜像。该命令将基于最新的代码进行构建镜像，该操作将
+>                               无法固定Frappe、ERPNext的版本。
+>       builder-oob [选项]      构建builder-oob镜像。该命令用于构建指定版本的基础镜像，并
+>                               用于后续基于该镜像快速构建自定义镜像，该操作可固定Frappe、
+>                               ERPNext的版本。
+>       custom [选项]           构建自定义APP镜像。在基于builder-oob命令构建出来的镜像的
+>                               基础上添加自定以APP。
+>       [镜像] [-h | --help]    镜像构建帮助
 >       get-default             查看当前构建默认值
->       set-default             设置构建默认值
+>       set-default [选项]      设置构建默认值
 >                                 使用方法：set-default param1=value1 param2=value2 ...
 >                                 支持以下参数：
->                                 镜像注册中心  registry
->                                 镜像命名空间  namespace
->                                 Frappe版本    frappe_version
->                                 Frappe仓库    frappe_path
+>                                 镜像注册中心          registry
+>                                 镜像命名空间          namespace
+>                                 主版本                main_version
+>                                 自定义镜像主版本       custom_main_version
+>                                 Frappe仓库            frappe_repo
+>                                 ERPNext仓库           erpnext_repo
+>                                 ERPNext Chinese仓库   erpnext_chinese_repo
+>                                 ERPNext OOB仓库       erpnext_oob_repo
 
 #### 设置构建默认值
 构建镜像时基于几个默认变量来确定镜像名称，要推送到的注册中心，frappe框架版本等，默认值如下：
@@ -98,16 +109,20 @@
 | -------------- | -------------- | ------------------------------------ |
 | 镜像注册中心   | registry       | ccr.ccs.tencentyun.com               |
 | 镜像命名空间   | namespace      | vnimy                                |
-| Frappe框架版本 | frappe_version | version-15                           |
-| Frappe仓库地址 | frappe_path    | https://gitee.com/mirrors/frappe.git |
+| 主版本 | main_version | version-15                           |
+| 自定义镜像主版本 | custom_main_version | version-15                           |
+| Frappe仓库地址 | frappe_repo    | https://gitee.com/mirrors/frappe.git |
+| ERPNext仓库地址 | erpnext_repo    | https://gitee.com/mirrors/erpnext.git |
+| ERPNext汉化仓库地址 | erpnext_chinese_repo    | https://gitee.com/yuzelin/erpnext_chinese.git |
+| ERPNext开箱即用仓库地址 | erpnext_oob_repo    | https://gitee.com/yuzelin/erpnext_oob.git |
 
 1. 设置默认值
     ```shell
     ./build.sh set-default \
       registry=ccr.ccs.tencentyun.com \
       namespace=vnimy \
-      frappe_version=version-15 \
-      frappe_path=https://gitee.com/mirrors/frappe.git
+      main_version=version-15 \
+      frappe_repo=https://gitee.com/mirrors/frappe.git
     ```
 
 2. 查看默认值
@@ -141,7 +156,7 @@
     ./build.sh builder
     ```
 
-### 构建生产镜像
+### 构建生产镜像(非固定版本)
 
 1. 配置`apps.json`
    
@@ -173,7 +188,51 @@
     ```shell
     ./build.sh backend
     ```
-    > 该命令会产生镜像`{$registry}/{$namespace}/erp:{$frappe_version}.{$(date '+%y%m%d')}`，镜像版本由Frappe框架版本及构建日期组成，如：`ccr.ccs.tencentyun.com/vnimy/erp:version-15.231106`。
+    > 该命令会产生镜像`{$registry}/{$namespace}/erp:{$main_version}.{$(date '+%y%m%d')}`，镜像版本由Frappe框架版本及构建日期组成，如：`ccr.ccs.tencentyun.com/vnimy/erp:version-15.231106`。
+
+### 构建生产镜像(固定版本)
+
+1. 设置默认值
+   由于基础镜像包含Frappe、ERPNext、ERPNext Chinese、ERPNext OOB等应用，因此需要提前设置好这些应用的仓库地址以及版本信息
+    ```shell
+    ./build.sh set-default \
+      registry=ccr.ccs.tencentyun.com \
+      namespace=vnimy \
+      main_version=version-15 \
+      frappe_repo=https://gitee.com/mirrors/frappe.git
+      erpnext_repo=https://gitee.com/mirrors/erpnext.git
+      erpnext_chinese_repo=https://gitee.com/yuzelin/erpnext_chinese.git
+      erpnext_oob_repo=https://gitee.com/yuzelin/erpnext_oob.git
+    ```
+
+2. 构建自定义镜像基础镜像
+    ```shell
+    ./build.sh builder-oob
+    ```
+
+    > 该命令构建并推送镜像`{$registry}/{$namespace}/frappe-builder-oob:{$main_version}.{$(date '+%y%m%d')}`
+    如：ccr.ccs.tencentyun.com/vnimy/frappe-builder-oob:version-15.231106
+
+3. 准备构建配置
+    在项目目录中创建文件`custom.txt`，并确保有以下内容
+    ```
+    app-name-1,app-repo-1,app-branch
+    app-name-2,app-repo-2,app-branch
+    app-name-3,app-repo-3,app-branch
+    ```
+
+    设置默认基础镜像版本：
+    **注意：** 版本为上一步构建的版本，如果不需要基于更新的基础版本，可以不更改改默认值
+    ```shell
+    ./build.sh set-default custom_main_version=version-15.231106
+    ```
+
+4. 构建自定义APP镜像
+    执行构建命令：
+    ```shell
+    ./build.sh custom
+    ```
+    > 该命令会产生镜像`{$registry}/{$namespace}/erp:{$custom_main_version}.{$(date '+%y%m%d')}`，镜像版本由自定义镜像主版本及构建日期组成，如：`ccr.ccs.tencentyun.com/vnimy/erp:version-15.231106.231213`。
 
 ## 部署
 
