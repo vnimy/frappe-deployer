@@ -250,9 +250,13 @@ function build_builder_oob() {
   TAG=$MAIN_VERSION.$DATE_VERSION
 
   FRAPPE_REPO=$DEFAULT_FRAPPE_REPO
+  FRAPPE_BRANCH=${DEFAULT_FRAPPE_BRANCH:-$MAIN_VERSION}
   ERPNEXT_REPO=$DEFAULT_ERPNEXT_REPO
+  ERPNEXT_BRANCH=${DEFAULT_ERPNEXT_BRANCH:-$MAIN_VERSION}
   ERPNEXT_CHINESE_REPO=$DEFAULT_ERPNEXT_CHINESE_REPO
+  ERPNEXT_CHINESE_BRANCH=${DEFAULT_ERPNEXT_CHINESE_BRANCH:-"master"}
   ERPNEXT_OOB_REPO=$DEFAULT_ERPNEXT_OOB_REPO
+  ERPNEXT_OOB_BRANCH=${DEFAULT_ERPNEXT_OOB_BRANCH:=$MAIN_VERSION}
 
   ARGS=`getopt -o hcr:n:v: -al help,cached,registry:,namespace:,version:,frappe-repo:,erpnext-repo:,erpnext-chinese-repo:,erpnext-oob-repo: -- "$@"`
   if [ $? != 0 ];then
@@ -319,13 +323,13 @@ function build_builder_oob() {
     --build-arg=DOCKER_REGISTRY=$REGISTRY \
     --build-arg=DOCKER_NAMESPACE=$NAMESPACE \
     --build-arg=FRAPPE_REPO=$FRAPPE_REPO \
-    --build-arg=FRAPPE_BRANCH=$MAIN_VERSION \
+    --build-arg=FRAPPE_BRANCH=$FRAPPE_BRANCH \
     --build-arg=ERPNEXT_REPO=$ERPNEXT_REPO \
-    --build-arg=ERPNEXT_BRANCH=$MAIN_VERSION \
+    --build-arg=ERPNEXT_BRANCH=$ERPNEXT_BRANCH \
     --build-arg=ERPNEXT_CHINESE_REPO=$ERPNEXT_CHINESE_REPO \
-    --build-arg=ERPNEXT_CHINESE_BRANCH=master \
+    --build-arg=ERPNEXT_CHINESE_BRANCH=$ERPNEXT_CHINESE_BRANCH \
     --build-arg=ERPNEXT_OOB_REPO=$ERPNEXT_OOB_REPO \
-    --build-arg=ERPNEXT_OOB_BRANCH=$MAIN_VERSION \
+    --build-arg=ERPNEXT_OOB_BRANCH=$ERPNEXT_OOB_BRANCH \
     --tag=$IMAGE \
     --file=Dockerfile.builder-oob $CACHE_ARG .
 
