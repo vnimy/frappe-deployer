@@ -1,0 +1,29 @@
+# 数据库设置
+dbHost: mariadb.development
+dbPort: 3306
+dbRootUser: root
+dbRootPassword: admin
+
+# 镜像仓库的保密字典
+imagePullSecrets:
+  - name: tx-registry
+
+# 镜像设置
+image:
+  repository: ccr.ccs.tencentyun.com/vnimy/erp
+  tag: version-14.240222.2404061753
+  pullPolicy: Always
+
+# 持久化数据设置
+persistence:
+  worker:
+    storageClass: nfs-client
+
+# 使用外部的数据库
+mariadb:
+  enabled: false
+
+# 卷权限修复
+jobs:
+  volumePermissions:
+    enabled: true

@@ -25,6 +25,9 @@
       - [启动ERP集群](#启动erp集群)
       - [新建站点](#新建站点-1)
       - [更新服务](#更新服务-1)
+    - [K8s Helm 部署](#k8s-helm-部署)
+      - [准备](#准备)
+      - [部署](#部署-1)
     - [其他](#其他)
       - [使用外部数据库](#使用外部数据库)
 
@@ -456,6 +459,81 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
     ```shell
     ./deploy.sh migrate {站点域名}
     ```
+
+### K8s Helm 部署
+
+#### 准备
+  1. **目录结构**
+     - k8s
+       - .env
+       - custom-values.yaml
+       - deploy.sh
+       - site1.example.com **具体站点的模板**
+         - tpl-new-site.yaml
+         - tpl-migrate.yaml
+         - tpl-ingress.yaml
+
+  2. **部署设置**
+      修改`custom-values.yaml`文件，按实际情况设置
+
+  3. **设置站点模板**
+      新建**站点名称**目录，将site1的文件复制进去，根据实际情况修改模板文件
+
+  4. **设置默认值**
+      ```properties
+      # Chart包版本，可以在https://helm.erpnext.com/查询对应ERPNext版本的包版本
+      CHART_VERSION=6.0.96
+      # K8s命名空间
+      NAMESPACE=frappe-bench-v14
+      # 默认站点，在不设置--site参数时默认使用的站点，单站点推荐设置
+      SITE=site1
+      ```
+
+#### 部署
+  **命令**
+  ```shell
+  # ./deploy help
+  用法：
+    <命令> [选项]
+  
+  命令：
+    help                    帮助
+    install [选项]          安装
+        -n|--namespace        命名空间
+        -v|--chart_version    Chart版本
+    uninstall [选项]        卸载
+        -n|--namespace        命名空间
+    new-site [选项]         新建站点
+        -n|--namespace        命名空间
+        -s|--site             站点名称
+    create-ingress [选项]   创建路由
+        -n|--namespace        命名空间
+        -s|--site             站点名称
+    migrate [选项]          合并
+        -n|--namespace        命名空间
+        -s|--site             站点名称
+    get-default             查看部署默认值
+    set-default [选项]      设置部署默认值
+                              使用方法：set-default param1=value1 param2=value2 ...
+                              支持以下参数：
+                              命名空间              namespace
+                              Chart版本             chart_version
+                              站点名称              site
+  ```
+
+  ```shell
+  # 安装
+  ./deploy.sh install
+  # 卸载
+  ./deploy.sh uninstall
+  # 新建站点
+  ./deploy.sh new-site -s site1.example.com
+  # 创建路由
+  ./deploy.sh create-ingress -s site1.example.com
+  # 合并
+  ./deploy.sh migrate -s site1.example.com
+  ```
+
 
 ### 其他
 #### 使用外部数据库

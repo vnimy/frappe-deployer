@@ -132,7 +132,7 @@ function build_base() {
   NAMESPACE=$DEFAULT_NAMESPACE
   REGISTRY=$DEFAULT_REGISTRY
 
-  ARGS=`getopt -o hr:n -al help,registry:,namespace: -- "$@"`
+  ARGS=`getopt -o hr:n: -al help,registry:,namespace: -- "$@"`
   if [ $? != 0 ];then
     echo "Terminating..."
     exit 1
@@ -188,7 +188,7 @@ function build_builder() {
   NAMESPACE=$DEFAULT_NAMESPACE
   REGISTRY=$DEFAULT_REGISTRY
 
-  ARGS=`getopt -o hr:n -al help,registry:,namespace: -- "$@"`
+  ARGS=`getopt -o hr:n: -al help,registry:,namespace: -- "$@"`
   if [ $? != 0 ];then
     echo "Terminating..."
     exit 1
@@ -436,7 +436,8 @@ function build_backend() {
 
 function build_custom() {
   MAIN_VERSION=$DEFAULT_CUSTOM_MAIN_VERSION
-  DATE_VERSION=$(date '+%y%m%d')
+  # 这里可以将版本定到分钟级，有助于在频繁推送并用Helm更新时候可以正常拉去最新镜像
+  DATE_VERSION=$(date '+%y%m%d%H%M')
   TAG=$MAIN_VERSION.$DATE_VERSION
   NAMESPACE=$DEFAULT_NAMESPACE
   IMAGE_NAME=$NAMESPACE/$DEFAULT_IMAGE_NAME

@@ -2,9 +2,6 @@ ARG DOCKER_REGISTRY=ccr.ccs.tencentyun.com
 ARG DOCKER_NAMESPACE=vnimy
 FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-base:latest AS builder
 
-COPY resources/nginx-template.conf /templates/nginx/frappe.conf.template
-COPY resources/nginx-entrypoint.sh /usr/local/bin/nginx-entrypoint.sh
-
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     # For frappe framework
