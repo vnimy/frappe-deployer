@@ -179,10 +179,6 @@
       {
         "url": "https://gitee.com/yuzelin/erpnext_oob.git",
         "branch": "version-15"
-      },
-      {
-        "url": "https://gitee.com/yuzelin/zelin_pp.git",
-        "branch": "master"
       }
     ]
    ```

@@ -527,7 +527,7 @@ function build_custom() {
     --build-arg=DOCKER_REGISTRY=$REGISTRY \
     --build-arg=DOCKER_NAMESPACE=$NAMESPACE \
     --build-arg=MAIN_VERSION=$MAIN_VERSION \
-    --build-arg=CUSTOM_APPS=$CUSTOM_APPS \
+    --build-arg=CUSTOM_APPS="$CUSTOM_APPS" \
     --tag=$IMAGE \
     --file=Dockerfile.custom --no-cache .
 
