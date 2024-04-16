@@ -28,7 +28,7 @@
     - [K8s Helm 部署](#k8s-helm-部署)
       - [环境变量设置](#环境变量设置)
       - [了解`deploy.sh`命令](#了解deploysh命令-1)
-      - [常用命令](#常用命令)
+      - [常用命令示例](#常用命令示例)
     - [其他](#其他)
       - [使用外部数据库（适用于Docker Compose 和 Docker Swarm）](#使用外部数据库适用于docker-compose-和-docker-swarm)
   - [特别感谢](#特别感谢)
@@ -480,8 +480,11 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
       # 默认站点，在不设置参数时默认使用的站点，单站点推荐设置，可通过(-t|--site)传入
       SITE=site1.example.com
 
+      # 安装的应用
+      INSTALL_APPS=erpnext,erpnext_chinese,erpnext_oob
       # 管理员密码，创建站点时必须，可通过(--admin-password)传入
       ADMIN_PASSWORD=admin
+      
       # 路由名称，创建路由时必须，可通过(--ingress_name)传入
       INGRESS_NAME=site1-ingress
       # 路由SSL证书保密字典，创建路由时必须，需提前创建保密字典，可通过(--ingress_tls)传入
@@ -534,12 +537,13 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
     -v|--chart_version    Chart版本
     -s|--site             站点名称
     -t|--tag              镜像版本
+        --install_apps     安装的应用，多个应用用英文逗号分隔，用于新建站点
         --admin_password   管理员密码，用于新建站点
         --ingress_name     路由名称，用于创建路由
         --ingress_tls      路由TLS保密字典名称，用于创建路由
   ```
 
-#### 常用命令
+#### 常用命令示例
   ```shell
   # 安装
   ./deploy.sh install -t version-14.240222.2404160935
@@ -551,6 +555,7 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
   ./deploy.sh new-site \
     -s site1.example.com \
     -t version-14.240222.2404160935 \
+    --install_apps=erpnext,erpnext_chinese,erpnext_oob,custom_app1,custom_app2 \
     --admin_password=admin
 
   # 创建路由

@@ -16,6 +16,8 @@ INGRESS_NAME="site1-ingress"
 INGRESS_TLS_SECRET_NAME="site1-ssl"
 # 管理员密码
 ADMIN_PASSWORD="admin"
+# 安装的应用
+INSTALL_APPS=erpnext,erpnext_chinese,erpnext_oob
 
 # 数据库设置
 DB_HOST="mariadb.development"
@@ -97,13 +99,14 @@ function show_usage() {
       -v|--chart_version    Chart版本
       -s|--site             站点名称
       -t|--tag              镜像版本
+         --install_apps     安装的应用，多个应用用英文逗号分隔，用于新建站点
          --admin_password   管理员密码，用于新建站点
          --ingress_name     路由名称，用于创建路由
          --ingress_tls      路由TLS保密字典名称，用于创建路由";
 }
 
 function get_params() {
-  ARGS=`getopt -o hv:n:s:t: -al help,chart_version:,namespace:,site:,tag:,ingress_name:,ingress_tls:admin_password: -- "$@"`
+  ARGS=`getopt -o hv:n:s:t: -al help,chart_version:,namespace:,site:,tag:,ingress_name:,ingress_tls:,admin_password:,install_apps: -- "$@"`
   if [ $? != 0 ];then
     echo "Terminating..."
     exit 1
@@ -137,6 +140,10 @@ function get_params() {
         ;;
       --ingress_tls)
         INGRESS_TLS_SECRET_NAME=$2
+        shift 2
+        ;;
+      --install_apps)
+        INSTALL_APPS=$2
         shift 2
         ;;
       --admin_password)
@@ -197,6 +204,9 @@ function template_new_site() {
   fi
   if [ -n $ADMIN_PASSWORD ]; then
     SET_ARGS="$SET_ARGS --set jobs.createSite.adminPassword=$ADMIN_PASSWORD"
+  fi
+  if [ -n $INSTALL_APPS ]; then
+    SET_ARGS="$SET_ARGS --set jobs.createSite.installApps={$INSTALL_APPS}"
   fi
   SET_ARGS="$SET_ARGS $SET_VALUES_ARGS"
   helm $SET_ARGS > dist/job-create-site.yaml
@@ -327,12 +337,15 @@ NAMESPACE=$NAMESPACE
 # 站点名称
 SITE=$SITE
 
+# 安装的应用
+INSTALL_APPS=erpnext,erpnext_chinese,erpnext_oob
+# 管理员密码
+ADMIN_PASSWORD=$ADMIN_PASSWORD
+
 # 路由名称
 INGRESS_NAME=$INGRESS_NAME
 # 路由SSL证书保密字典
 INGRESS_TLS_SECRET_NAME=$INGRESS_TLS_SECRET_NAME
-# 管理员密码
-ADMIN_PASSWORD=$ADMIN_PASSWORD
 
 # 数据库设置
 DB_HOST=$DB_HOST
@@ -399,6 +412,7 @@ case "$subcommand" in
     exit 0
     ;;
   "template")
+    get_params $@
     template $@
     exit 0
     ;;
