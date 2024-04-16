@@ -1,0 +1,10 @@
+jobs:
+  createSite:
+    enabled: true
+    siteName: "site1.example.com" # 站点名称，环境变量SITE
+    adminPassword: "admin" # 管理员密码，环境变量ADMIN_PASSWORD
+    installApps:
+      - erpnext
+      - erpnext_chinese
+      - erpnext_oob
+      # - erpnext_custom # 安装自定义应用

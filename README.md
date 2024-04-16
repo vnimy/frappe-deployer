@@ -26,8 +26,9 @@
       - [新建站点](#新建站点-1)
       - [更新服务](#更新服务-1)
     - [K8s Helm 部署](#k8s-helm-部署)
-      - [准备](#准备)
-      - [部署](#部署-1)
+      - [环境变量设置](#环境变量设置)
+      - [了解`deploy.sh`命令](#了解deploysh命令-1)
+      - [常用命令](#常用命令)
     - [其他](#其他)
       - [使用外部数据库（适用于Docker Compose 和 Docker Swarm）](#使用外部数据库适用于docker-compose-和-docker-swarm)
   - [特别感谢](#特别感谢)
@@ -464,35 +465,47 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
 
 ### K8s Helm 部署
 
-#### 准备
-  1. **目录结构**
-     - k8s
-       - .env
-       - custom-values.yaml
-       - deploy.sh
-       - site1.example.com **具体站点的模板**
-         - tpl-new-site.yaml
-         - tpl-migrate.yaml
-         - tpl-ingress.yaml
-
-  2. **部署设置**
-      修改`custom-values.yaml`文件，按实际情况设置
-
-  3. **设置站点模板**
-      新建**站点名称**目录，将site1的文件复制进去，根据实际情况修改模板文件
-
-  4. **设置默认值**
-      ```properties
-      # Chart包版本，可以在https://helm.erpnext.com/查询对应ERPNext版本的包版本
-      CHART_VERSION=6.0.96
-      # K8s命名空间
-      NAMESPACE=frappe-bench-v14
-      # 默认站点，在不设置--site参数时默认使用的站点，单站点推荐设置
-      SITE=site1
+#### 环境变量设置
+  1. 复制`.env.sample`到`.env`
+      ```shell
+      cp .env.sample .env
       ```
 
-#### 部署
-  **命令**
+  2. 设置`.env`环境变量
+      ```properties
+      # Chart包版本，可通过(-v|--chart_version)传入，可以在https://helm.erpnext.com/查询对应ERPNext版本的包版本
+      CHART_VERSION=6.0.96
+      # K8s命名空间，可通过(-n|--namespace)传入
+      NAMESPACE=frappe-bench-v14
+      # 默认站点，在不设置参数时默认使用的站点，单站点推荐设置，可通过(-t|--site)传入
+      SITE=site1.example.com
+
+      # 管理员密码，创建站点时必须，可通过(--admin-password)传入
+      ADMIN_PASSWORD=admin
+      # 路由名称，创建路由时必须，可通过(--ingress_name)传入
+      INGRESS_NAME=site1-ingress
+      # 路由SSL证书保密字典，创建路由时必须，需提前创建保密字典，可通过(--ingress_tls)传入
+      INGRESS_TLS_SECRET_NAME=site1-ssl
+
+      # 数据库设置，需提前部署数据库服务
+      DB_HOST=mariadb.development
+      DB_PORT=3306
+      DB_ROOT_USER=root
+      DB_ROOT_PASSWORD=root
+
+      # 镜像仓库的保密字典，需提前创建仓库保密字典
+      IMAGE_PULL_SECRET_NAME=tx-registry
+
+      # 镜像仓库
+      IMAGE_REPOSITORY=ccr.ccs.tencentyun.com/vnimy/erp
+      # 镜像版本，可通过(-t|--tag)传入
+      IMAGE_TAG=version-14.240222.2404061753
+
+      # 持久化数据设置，需提前创建存储类
+      PERSISTENCE_STORAGE_CLASS=nfs-client
+      ```
+
+#### 了解`deploy.sh`命令
   ```shell
   # ./deploy help
   用法：
@@ -500,20 +513,11 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
   
   命令：
     help                    帮助
-    install [选项]          安装
-        -n|--namespace        命名空间
-        -v|--chart_version    Chart版本
-    uninstall [选项]        卸载
-        -n|--namespace        命名空间
-    new-site [选项]         新建站点
-        -n|--namespace        命名空间
-        -s|--site             站点名称
-    create-ingress [选项]   创建路由
-        -n|--namespace        命名空间
-        -s|--site             站点名称
-    migrate [选项]          合并
-        -n|--namespace        命名空间
-        -s|--site             站点名称
+    install [选项]          安装，可用参数-n|-v|-t
+    uninstall [选项]        卸载，可用参数-n
+    new-site [选项]         新建站点，可用参数-n|-v|-s|-t
+    create-ingress [选项]   创建路由，可用参数-n|-v|-s|-t|--ingress
+    migrate [选项]          合并，可用参数-n|-v|-s|-t
     get-default             查看部署默认值
     set-default [选项]      设置部署默认值
                               使用方法：set-default param1=value1 param2=value2 ...
@@ -521,19 +525,43 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
                               命名空间              namespace
                               Chart版本             chart_version
                               站点名称              site
+                              镜像版本              image_tag
+                              路由名称              ingress_name
+                              路由TLS保密字典名称   ingress_tls_secret_name
+                              管理员密码            admin_password
+  参数：
+    -n|--namespace        命名空间
+    -v|--chart_version    Chart版本
+    -s|--site             站点名称
+    -t|--tag              镜像版本
+        --admin_password   管理员密码，用于新建站点
+        --ingress_name     路由名称，用于创建路由
+        --ingress_tls      路由TLS保密字典名称，用于创建路由
   ```
 
+#### 常用命令
   ```shell
   # 安装
-  ./deploy.sh install
+  ./deploy.sh install -t version-14.240222.2404160935
+
   # 卸载
   ./deploy.sh uninstall
+
   # 新建站点
-  ./deploy.sh new-site -s site1.example.com
+  ./deploy.sh new-site \
+    -s site1.example.com \
+    -t version-14.240222.2404160935 \
+    --admin_password=admin
+
   # 创建路由
-  ./deploy.sh create-ingress -s site1.example.com
+  ./deploy.sh create-ingress \
+    -s site1.example.com \
+    -t version-14.240222.2404160935 \
+    --ingress_name site1-ingress \
+    --ingress_tls site1-ssl
+  
   # 合并
-  ./deploy.sh migrate -s site1.example.com
+  ./deploy.sh migrate -s site1.example.com -t version-14.240222.2404160935
   ```
 
 

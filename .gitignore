@@ -1,6 +1,4 @@
+dist
 .env
 custom.txt
 k8s/erpnext-*.tgz
-k8s/site1.example.com/job-create-site.yaml
-k8s/site1.example.com/job-migrate-site.yaml
-k8s/site1.example.com/ingress.yaml

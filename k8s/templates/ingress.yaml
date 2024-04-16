@@ -1,0 +1,16 @@
+ingress:
+  enabled: true
+  ingressName: "site1-ingress" # 路由名称，环境变量INGRESS_NAME
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+  hosts:
+  - host: site1.example.com # 域名，环境变量SITE
+    paths:
+    - path: /
+      pathType: ImplementationSpecific
+  tls:
+  - secretName: site1-ssl # SSL保密字典，环境变量INGRESS_TLS_SECRET_NAME
+    hosts:
+      - site1.example.com # 域名，环境变量SITE

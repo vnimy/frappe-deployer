@@ -1,0 +1,4 @@
+jobs:
+  migrate:
+    enabled: true
+    siteName: "site1.example.com" # 站点名称，环境变量SITE
