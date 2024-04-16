@@ -29,7 +29,9 @@
       - [准备](#准备)
       - [部署](#部署-1)
     - [其他](#其他)
-      - [使用外部数据库](#使用外部数据库)
+      - [使用外部数据库（适用于Docker Compose 和 Docker Swarm）](#使用外部数据库适用于docker-compose-和-docker-swarm)
+  - [特别感谢](#特别感谢)
+  - [相关链接](#相关链接)
 
 
 # 部署说明
@@ -219,6 +221,10 @@
     app-name-2,app-repo-2,app-branch
     app-name-3,app-repo-3,app-branch
     ```
+
+    
+    > **如何在构建时不需要密码和SSH Key拉取私有仓库APP？**
+      创建一个访问令牌，在仓库URL中使用令牌来拉取。如：`https://x-access-token:your-token@github.com/your-username/your-repo.git`，具体令牌创建及访问方式视Git托管平台而定。
 
     设置默认基础镜像版本：
     **注意：** 版本为上一步构建的版本，如果不需要基于更新的基础版本，可以不更改改默认值
@@ -532,7 +538,7 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
 
 
 ### 其他
-#### 使用外部数据库
+#### 使用外部数据库（适用于Docker Compose 和 Docker Swarm）
   修改`.env`文件，设置`DB_HOST`、`DB_PORT`以及`DB_PASSWORD`
   ```properties
   # 数据库主机
@@ -543,3 +549,14 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
   DB_PASSWORD=root
   ```
   **注意：** 只能使用**MariaDB**
+
+## 特别感谢
+感谢[余则霖](https://gitee.com/yuzelin)对ERPNext本地化的贡献，基于此将[界面汉化](https://gitee.com/yuzelin/erpnext_chinese)及[开箱即用](https://gitee.com/yuzelin/erpnext_oob)应用默认添加到builder-oob基础镜像中。
+
+## 相关链接
+- Frappe Framework https://frappeframework.com
+- Frappe https://github.com/frappe/frappe
+- ERPNext https://github.com/frappe/erpnext
+- Frappe Docker https://github.com/frappe/frappe_docker
+- ERPNext界面汉化 https://gitee.com/yuzelin/erpnext_chinese
+- ERPNext开箱即用 https://gitee.com/yuzelin/erpnext_oob
