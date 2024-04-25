@@ -46,30 +46,6 @@ fi
 set +a
 
 SET_VALUES_ARGS=""
-if [ -n $DB_HOST ]; then
-  SET_VALUES_ARGS="$SET_VALUES_ARGS --set dbHost=$DB_HOST"
-fi
-if [ -n $DB_PORT ]; then
-  SET_VALUES_ARGS="$SET_VALUES_ARGS --set dbPort=$DB_PORT"
-fi
-if [ -n $DB_ROOT_USER ]; then
-  SET_VALUES_ARGS="$SET_VALUES_ARGS --set dbRootUser=$DB_ROOT_USER"
-fi
-if [ -n $DB_ROOT_PASSWORD ]; then
-  SET_VALUES_ARGS="$SET_VALUES_ARGS --set dbRootPassword=$DB_ROOT_PASSWORD"
-fi
-if [ -n $IMAGE_PULL_SECRET_NAME ]; then
-  SET_VALUES_ARGS="$SET_VALUES_ARGS --set imagePullSecrets[0].name=$IMAGE_PULL_SECRET_NAME"
-fi
-if [ -n $IMAGE_REPOSITORY ]; then
-  SET_VALUES_ARGS="$SET_VALUES_ARGS --set image.repository=$IMAGE_REPOSITORY"
-fi
-if [ -n $IMAGE_TAG ]; then
-  SET_VALUES_ARGS="$SET_VALUES_ARGS --set image.tag=$IMAGE_TAG"
-fi
-if [ -n $PERSISTENCE_STORAGE_CLASS ]; then
-  SET_VALUES_ARGS="$SET_VALUES_ARGS --set persistence.worker.storageClass=$PERSISTENCE_STORAGE_CLASS"
-fi
 
 function show_usage() {
   echo -e "
@@ -163,6 +139,31 @@ function get_params() {
         exit 0
         ;;
   esac done
+  
+  if [ -n $DB_HOST ]; then
+    SET_VALUES_ARGS="$SET_VALUES_ARGS --set dbHost=$DB_HOST"
+  fi
+  if [ -n $DB_PORT ]; then
+    SET_VALUES_ARGS="$SET_VALUES_ARGS --set dbPort=$DB_PORT"
+  fi
+  if [ -n $DB_ROOT_USER ]; then
+    SET_VALUES_ARGS="$SET_VALUES_ARGS --set dbRootUser=$DB_ROOT_USER"
+  fi
+  if [ -n $DB_ROOT_PASSWORD ]; then
+    SET_VALUES_ARGS="$SET_VALUES_ARGS --set dbRootPassword=$DB_ROOT_PASSWORD"
+  fi
+  if [ -n $IMAGE_PULL_SECRET_NAME ]; then
+    SET_VALUES_ARGS="$SET_VALUES_ARGS --set imagePullSecrets[0].name=$IMAGE_PULL_SECRET_NAME"
+  fi
+  if [ -n $IMAGE_REPOSITORY ]; then
+    SET_VALUES_ARGS="$SET_VALUES_ARGS --set image.repository=$IMAGE_REPOSITORY"
+  fi
+  if [ -n $IMAGE_TAG ]; then
+    SET_VALUES_ARGS="$SET_VALUES_ARGS --set image.tag=$IMAGE_TAG"
+  fi
+  if [ -n $PERSISTENCE_STORAGE_CLASS ]; then
+    SET_VALUES_ARGS="$SET_VALUES_ARGS --set persistence.worker.storageClass=$PERSISTENCE_STORAGE_CLASS"
+  fi
 
   if [[ -n $CHART_VERSION && ! -e ./erpnext-$CHART_VERSION.tgz ]]; then
     download_chart
