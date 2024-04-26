@@ -517,6 +517,7 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
   命令：
     help                    帮助
     install [选项]          安装，可用参数-n|-v|-t
+    update [选项]           更新（安装+合并），可用参数-n|-v|-t
     uninstall [选项]        卸载，可用参数-n
     new-site [选项]         新建站点，可用参数-n|-v|-s|-t
     create-ingress [选项]   创建路由，可用参数-n|-v|-s|-t|--ingress
@@ -547,6 +548,9 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
   ```shell
   # 安装
   ./deploy.sh install -t version-14.240222.2404160935
+
+  # 更新
+  ./deploy.sh update -t version-14.240222.2404160935
 
   # 卸载
   ./deploy.sh uninstall
