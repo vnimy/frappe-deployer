@@ -35,6 +35,8 @@ IMAGE_TAG="version-14.240222.2404061753"
 # 持久化数据设置
 PERSISTENCE_STORAGE_CLASS="nfs-client"
 
+UPDATE_MIGRATE=false
+
 if [[ ! -f .env && -f .env.sample ]]; then
   cp .env.sample .env
 fi
@@ -55,7 +57,7 @@ function show_usage() {
     命令：
       help                    帮助
       install [选项]          安装，可用参数-n|-v|-t
-      update [选项]           更新（安装+合并），可用参数-n|-v|-t
+      update [选项]           更新，可用参数-n|-v|-t|--migrate
       uninstall [选项]        卸载，可用参数-n
       new-site [选项]         新建站点，可用参数-n|-v|-s|-t
       create-ingress [选项]   创建路由，可用参数-n|-v|-s|-t|--ingress
@@ -76,6 +78,7 @@ function show_usage() {
       -v|--chart_version    Chart版本
       -s|--site             站点名称
       -t|--tag              镜像版本
+         --migrate          合并，用于更新命令
          --install_apps     安装的应用，多个应用用英文逗号分隔，用于新建站点
          --admin_password   管理员密码，用于新建站点
          --ingress_name     路由名称，用于创建路由
@@ -83,7 +86,7 @@ function show_usage() {
 }
 
 function get_params() {
-  ARGS=`getopt -o hv:n:s:t: -al help,chart_version:,namespace:,site:,tag:,ingress_name:,ingress_tls:,admin_password:,install_apps: -- "$@"`
+  ARGS=`getopt -o hv:n:s:t: -al help,chart_version:,namespace:,site:,tag:,ingress_name:,ingress_tls:,admin_password:,install_apps:,migrate -- "$@"`
   if [ $? != 0 ];then
     echo "Terminating..."
     exit 1
@@ -126,6 +129,9 @@ function get_params() {
       --admin_password)
         ADMIN_PASSWORD=$2
         shift 2
+        ;;
+      --migrate)
+        UPDATE_MIGRATE=true
         ;;
       -h|--help)
         show_usage
@@ -193,7 +199,9 @@ function uninstall() {
 
 function update() {
   install
-  migrate
+  if [ $UPDATE_MIGRATE ]; then
+    migrate
+  fi
 }
 
 function template_new_site() {
