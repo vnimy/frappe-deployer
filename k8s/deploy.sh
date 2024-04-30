@@ -35,7 +35,7 @@ IMAGE_TAG="version-14.240222.2404061753"
 # 持久化数据设置
 PERSISTENCE_STORAGE_CLASS="nfs-client"
 
-UPDATE_MIGRATE=false
+UPDATE_MIGRATE=0
 
 if [[ ! -f .env && -f .env.sample ]]; then
   cp .env.sample .env
@@ -131,7 +131,8 @@ function get_params() {
         shift 2
         ;;
       --migrate)
-        UPDATE_MIGRATE=true
+        UPDATE_MIGRATE=1
+        shift 1
         ;;
       -h|--help)
         show_usage
@@ -199,7 +200,7 @@ function uninstall() {
 
 function update() {
   install
-  if [ $UPDATE_MIGRATE ]; then
+  if [ $UPDATE_MIGRATE -eq 1 ]; then
     migrate
   fi
 }
