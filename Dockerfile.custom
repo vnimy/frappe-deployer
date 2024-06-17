@@ -10,7 +10,7 @@ SHELL [ "/bin/bash" , "-c" ]
 RUN \
   cd /home/frappe/frappe-bench \
   && if [ -n "${CUSTOM_APPS}" ]; then \
-  echo $CUSTOM_APPS | while read -r line; \
+  echo "$CUSTOM_APPS" | while read -r line; \
   do \
     app=(${line//,/ }); \
     bench get-app --branch=${app[2]:-"master"} --resolve-deps ${app[0]} ${app[1]}; \

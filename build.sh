@@ -517,7 +517,7 @@ function build_custom() {
     if [ -n "${CUSTOM_APP_REPO}" ]; then
       CUSTOM_APPS="${CUSTOM_APP_NAME},${CUSTOM_APP_REPO},${CUSTOM_APP_BRANCH:-"master"}"
     elif [ -e "custom.txt" ]; then
-      CUSTOM_APPS=$(cat "custom.txt")
+      CUSTOM_APPS=$(cat "custom.txt" | grep -v "#")
     fi
   fi
 
