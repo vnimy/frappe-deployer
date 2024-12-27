@@ -1,14 +1,21 @@
 ARG DOCKER_REGISTRY=ccr.ccs.tencentyun.com
 ARG DOCKER_NAMESPACE=vnimy
 ARG MAIN_VERSION=version-15
-FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-builder-oob:${MAIN_VERSION} as builder
+FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/erpnext:${MAIN_VERSION}
 
 USER frappe
 
 ARG CUSTOM_APPS=
 SHELL [ "/bin/bash" , "-c" ]
 RUN \
-  cd /home/frappe/frappe-bench \
+  # 设置pip镜像源
+  mkdir ~/.pip \
+  && echo '[global]' > ~/.pip/pip.conf \
+  && echo 'index-url = https://pypi.tuna.tsinghua.edu.cn/simple' >> ~/.pip/pip.conf \
+  && echo '[install]' >> ~/.pip/pip.conf \
+  && echo 'trusted-host = https://pypi.tuna.tsinghua.edu.cn' >> ~/.pip/pip.conf \
+  # 安装自定义应用
+  && cd /home/frappe/frappe-bench \
   && if [ -n "${CUSTOM_APPS}" ]; then \
   echo "$CUSTOM_APPS" | while read -r line; \
   do \
@@ -17,30 +24,3 @@ RUN \
   done \
   fi \
   && find apps -mindepth 1 -path "*/.git" | xargs rm -fr
-
-FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-base:latest as custom
-
-
-COPY resources/nginx-template.conf /templates/nginx/frappe.conf.template
-COPY resources/entrypoints /usr/local/bin
-
-RUN cd /usr/local/bin \
-  && chmod 755 \
-  backend-entrypoint.sh \
-  configurator-entrypoint.sh \
-  nginx-entrypoint.sh \
-  websocket-entrypoint.sh
-
-USER frappe
-
-COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench /home/frappe/frappe-bench
-
-WORKDIR /home/frappe/frappe-bench
-
-VOLUME [ \
-  "/home/frappe/frappe-bench/sites", \
-  "/home/frappe/frappe-bench/sites/assets", \
-  "/home/frappe/frappe-bench/logs" \
-]
-
-CMD [ "backend-entrypoint.sh" ]

@@ -5,9 +5,9 @@ set -e
 
 DEFAULT_REGISTRY=ccr.ccs.tencentyun.com
 DEFAULT_NAMESPACE=vnimy
-DEFAULT_MAIN_VERSION=version-14
+DEFAULT_MAIN_VERSION=version-15
 # 默认自定镜像主版本
-DEFAULT_CUSTOM_MAIN_VERSION=version-14
+DEFAULT_CUSTOM_MAIN_VERSION=version-15
 DEFAULT_FRAPPE_REPO=https://gitee.com/mirrors/frappe.git
 DEFAULT_ERPNEXT_REPO=https://gitee.com/mirrors/erpnext.git
 DEFAULT_ERPNEXT_CHINESE_REPO=https://gitee.com/yuzelin/erpnext_chinese.git
@@ -28,14 +28,11 @@ function show_usage() {
     命令：
       help                    帮助
       base [选项]             构建基础镜像
-      builder [选项]          构建builder镜像
-      backend [选项]          构建后端镜像。该命令将基于最新的代码进行构建镜像，该操作将
-                              无法固定Frappe、ERPNext的版本。
-      builder-oob [选项]      构建builder-oob镜像。该命令用于构建指定版本的基础镜像，并
-                              用于后续基于该镜像快速构建自定义镜像，该操作可固定Frappe、
-                              ERPNext的版本。
-      custom [选项]           构建自定义APP镜像。在基于builder-oob命令构建出来的镜像的
-                              基础上添加自定以APP。
+      builder [选项]          构建Builder镜像
+      erpnext [选项]          构建指定版本的ERPNext镜像，该镜像已包含ERRNext、
+                              ERPNext Chinese、ERPNext OOB，可直接部署使用。
+      custom [选项]           构建自定义APP镜像。在基于erpnext命令构建出来的镜像的
+                              基础上添加自定义APP。
       [镜像] [-h | --help]    镜像构建帮助
       get-default             查看当前构建默认值
       set-default [选项]      设置构建默认值
@@ -49,61 +46,6 @@ function show_usage() {
                                 ERPNext仓库           erpnext_repo
                                 ERPNext Chinese仓库   erpnext_chinese_repo
                                 ERPNext OOB仓库       erpnext_oob_repo";
-}
-
-function show_backend_usage() {
-  echo -e "
-    用法：
-      backend [选项]
-    
-    命令：
-      -h,--help                         帮助
-      -f,--apps_file [path]             apps json文件路径，默认：apps.json
-      -r,--registry [registry]          镜像注册中心，默认：$DEFAULT_REGISTRY
-      -n,--namespace [namespace]        镜像注册中心的命名空间，默认：$DEFAULT_NAMESPACE
-      -v,--version [version]            主版本，默认：$DEFAULT_MAIN_VERSION
-      -i,--image [name]                 镜像名称，不包含标签，默认：$DEFAULT_NAMESPACE/$DEFAULT_IMAGE_NAME
-      -t,--tag [name]                   镜像标签，默认：$DEFAULT_MAIN_VERSION.$(date '+%y%m%d')
-         --frappe-repo [repo]           Frappe框架仓库地址，默认：$DEFAULT_FRAPPE_REPO
-      -c,--cached                       使用缓存进行构建，默认不使用缓存";
-}
-
-function show_custom_usage() {
-  echo -e "
-    用法：
-      backend [选项]
-    
-    命令：
-      -h,--help                         帮助
-      -r,--registry [registry]          镜像注册中心，默认：$DEFAULT_REGISTRY
-      -n,--namespace [namespace]        镜像注册中心的命名空间，默认：$DEFAULT_NAMESPACE
-      -v,--version [version]            基础镜像版本，默认：$DEFAULT_CUSTOM_MAIN_VERSION
-      -i,--image [name]                 镜像名称，不包含标签，默认：$DEFAULT_NAMESPACE/$DEFAULT_IMAGE_NAME
-      -t,--tag [name]                   镜像标签，默认：$DEFAULT_CUSTOM_MAIN_VERSION.$(date '+%y%m%d')
-      -f,--app-file [file]              自定义应用配置文件，一行一个APP，该配置优先于app-branch,app-repo,app-name参数
-                                        例子 custom.txt：
-                                            app-name1,app-repo1,app-branch1
-                                            app-name2,app-repo2,app-branch2
-         --app-branch [branch]          自定义应用分支名称，默认：master
-         --app-repo [repo]              自定义应用仓库地址
-         --app-name [name]              自定义应用名称";
-}
-
-function show_builder_oob_usage() {
-  echo -e "
-    用法：
-      builder-oob [选项]
-    
-    命令：
-      -h,--help                         帮助
-      -r,--registry [registry]          镜像注册中心，默认：$DEFAULT_REGISTRY
-      -n,--namespace [namespace]        镜像注册中心的命名空间，默认：$DEFAULT_NAMESPACE
-      -v,--version [version]            主版本，默认：$DEFAULT_MAIN_VERSION
-         --frappe-repo [repo]           Frappe框架仓库地址，默认：$DEFAULT_FRAPPE_REPO
-         --erpnext-repo [repo]          ERPNext仓库地址，默认：$DEFAULT_ERPNEXT_REPO
-         --erpnext-chinese-repo [repo]  ERPNext Chinese仓库地址，默认：$DEFAULT_ERPNEXT_CHINESE_REPO
-         --erpnext-oob-repo [repo]      ERPNext OOB仓库地址，默认：$DEFAULT_ERPNEXT_OOB_REPO
-      -c,--cached                       使用缓存进行构建，默认不使用缓存";
 }
 
 function show_base_usage() {
@@ -126,6 +68,44 @@ function show_builder_usage() {
       -h,--help                         帮助
       -r,--registry [registry]          镜像注册中心，默认：$DEFAULT_REGISTRY
       -n,--namespace [namespace]        镜像注册中心的命名空间，默认：$DEFAULT_NAMESPACE";
+}
+
+function show_erpnext_usage() {
+  echo -e "
+    用法：
+      erpnext [选项]
+    
+    命令：
+      -h,--help                         帮助
+      -r,--registry [registry]          镜像注册中心，默认：$DEFAULT_REGISTRY
+      -n,--namespace [namespace]        镜像注册中心的命名空间，默认：$DEFAULT_NAMESPACE
+      -v,--version [version]            主版本，默认：$DEFAULT_MAIN_VERSION
+         --frappe-repo [repo]           Frappe框架仓库地址，默认：$DEFAULT_FRAPPE_REPO
+         --erpnext-repo [repo]          ERPNext仓库地址，默认：$DEFAULT_ERPNEXT_REPO
+         --erpnext-chinese-repo [repo]  ERPNext Chinese仓库地址，默认：$DEFAULT_ERPNEXT_CHINESE_REPO
+         --erpnext-oob-repo [repo]      ERPNext OOB仓库地址，默认：$DEFAULT_ERPNEXT_OOB_REPO
+      -c,--cached                       使用缓存进行构建，默认不使用缓存";
+}
+
+function show_custom_usage() {
+  echo -e "
+    用法：
+      custom [选项]
+    
+    命令：
+      -h,--help                         帮助
+      -r,--registry [registry]          镜像注册中心，默认：$DEFAULT_REGISTRY
+      -n,--namespace [namespace]        镜像注册中心的命名空间，默认：$DEFAULT_NAMESPACE
+      -v,--version [version]            基础镜像版本，默认：$DEFAULT_CUSTOM_MAIN_VERSION
+      -i,--image [name]                 镜像名称，不包含标签，默认：$DEFAULT_NAMESPACE/$DEFAULT_IMAGE_NAME
+      -t,--tag [name]                   镜像标签，默认：$DEFAULT_CUSTOM_MAIN_VERSION.$(date '+%y%m%d')
+      -f,--app-file [file]              自定义应用配置文件，一行一个APP，该配置优先于app-branch,app-repo,app-name参数
+                                        例子 custom.txt：
+                                            app-name1,app-repo1,app-branch1
+                                            app-name2,app-repo2,app-branch2
+         --app-branch [branch]          自定义应用分支名称，默认：master
+         --app-repo [repo]              自定义应用仓库地址
+         --app-name [name]              自定义应用名称";
 }
 
 function build_base() {
@@ -240,7 +220,7 @@ function build_builder() {
   fi
 }
 
-function build_builder_oob() {
+function build_erpnext() {
   NAMESPACE=$DEFAULT_NAMESPACE
   REGISTRY=$DEFAULT_REGISTRY
   CACHE_ARG=--no-cache
@@ -258,7 +238,7 @@ function build_builder_oob() {
   ERPNEXT_OOB_REPO=$DEFAULT_ERPNEXT_OOB_REPO
   ERPNEXT_OOB_BRANCH=${DEFAULT_ERPNEXT_OOB_BRANCH:=$MAIN_VERSION}
 
-  ARGS=`getopt -o hcr:n:v: -al help,cached,registry:,namespace:,version:,frappe-repo:,erpnext-repo:,erpnext-chinese-repo:,erpnext-oob-repo: -- "$@"`
+  ARGS=`getopt -o hcr:n:v: -al help,cached,builder,registry:,namespace:,version:,frappe-repo:,erpnext-repo:,erpnext-chinese-repo:,erpnext-oob-repo: -- "$@"`
   if [ $? != 0 ];then
     echo "Terminating..."
     exit 1
@@ -302,8 +282,12 @@ function build_builder_oob() {
         CACHE_ARG=""
         shift
         ;;
+      --builder)
+        BUILDER=1
+        shift
+        ;;
       -h|--help)
-        show_builder_oob_usage
+        show_erpnext_usage
         exit 0
         ;;
       --)
@@ -311,12 +295,13 @@ function build_builder_oob() {
         break
         ;;
       *)
-        show_builder_oob_usage
+        show_erpnext_usage
         exit 0
         ;;
   esac done
 
-  IMAGE=${REGISTRY}/${NAMESPACE}/frappe-builder-oob:${TAG}
+  IMAGE=${REGISTRY}/${NAMESPACE}/erpnext:${TAG}
+
   echo "开始构建镜像：$IMAGE"
 
   docker build \
@@ -331,106 +316,13 @@ function build_builder_oob() {
     --build-arg=ERPNEXT_OOB_REPO=$ERPNEXT_OOB_REPO \
     --build-arg=ERPNEXT_OOB_BRANCH=$ERPNEXT_OOB_BRANCH \
     --tag=$IMAGE \
-    --file=Dockerfile.builder-oob $CACHE_ARG .
+    --file=Dockerfile $CACHE_ARG .
 
   echo "构建完成 $IMAGE"
 
   if [ $? -eq 0 ]; then
     docker push $IMAGE
     echo "推送完成 $IMAGE"
-  fi
-}
-
-function build_backend() {
-  MAIN_VERSION=$DEFAULT_MAIN_VERSION
-  DATE_VERSION=$(date '+%y%m%d')
-  TAG=$MAIN_VERSION.$DATE_VERSION
-  NAMESPACE=$DEFAULT_NAMESPACE
-  IMAGE_NAME=$NAMESPACE/$DEFAULT_IMAGE_NAME
-  REGISTRY=$DEFAULT_REGISTRY
-  APPS_FILE=apps.json
-  CACHE_ARG=--no-cache
-  FRAPPE_REPO=$DEFAULT_FRAPPE_REPO
-
-  ARGS=`getopt -o hcf:r:n:i:t:v: -al help,cached,apps_file:,registry:,namespace:,image:,tag:,version:,frappe-repo: -- "$@"`
-  if [ $? != 0 ];then
-    echo "Terminating..."
-    exit 1
-  fi
-
-  #重新排列参数顺序
-  eval set -- "${ARGS}"
-  #通过shift和while循环处理参数
-  while :
-  do
-    case $1 in
-      -f|--apps_file)
-        APPS_FILE=$2
-        shift 2
-        ;;
-      -t|--tag)
-        TAG=$2
-        shift 2
-        ;;
-      -r|--registry)
-        REGISTRY=$2
-        shift 2
-        ;;
-      -i|--image)
-        IMAGE_NAME=$2
-        shift 2
-        ;;
-      -n|--namespace)
-        NAMESPACE=$2
-        shift 2
-        ;;
-      --frappe-repo)
-        FRAPPE_REPO=$2
-        shift 2
-        ;;
-      -v|--version)
-        MAIN_VERSION=$2
-        shift 2
-        ;;
-      -c|--cached)
-        CACHE_ARG=""
-        shift
-        ;;
-      -h|--help)
-        show_backend_usage
-        exit 0
-        ;;
-      --)
-        shift
-        break
-        ;;
-      *)
-        show_backend_usage
-        exit 0
-        ;;
-  esac done
-
-  if [ ! -f $APPS_FILE ]; then
-    echo "${APPS_FILE}文件不存在"
-    exit 1
-  fi
-
-  IMAGE=${REGISTRY}/${IMAGE_NAME}:${TAG}
-  echo "开始构建镜像：$IMAGE"
-
-  docker build \
-    --build-arg=DOCKER_REGISTRY=$REGISTRY \
-    --build-arg=DOCKER_NAMESPACE=$NAMESPACE \
-    --build-arg=FRAPPE_REPO=$FRAPPE_REPO \
-    --build-arg=FRAPPE_BRANCH=$MAIN_VERSION \
-    --build-arg=APPS_JSON_BASE64=$(base64 -w 0 ${APPS_FILE}) \
-    --tag=$IMAGE $CACHE_ARG .
-
-  echo "构建完成"
-
-  if [ $? -eq 0 ]; then
-    docker push $IMAGE
-    echo "推送完成"
   fi
 }
 
@@ -612,12 +504,8 @@ case "$subcommand" in
     build_builder $@
     exit 0
     ;;
-  "builder-oob")
-    build_builder_oob $@
-    exit 0
-    ;;
-  "backend")
-    build_backend $@
+  "erpnext")
+    build_erpnext $@
     exit 0
     ;;
   "custom")

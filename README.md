@@ -7,8 +7,8 @@
       - [设置构建默认值](#设置构建默认值)
     - [构建基础镜像](#构建基础镜像)
       - [相关命令](#相关命令)
-    - [构建生产镜像(非固定版本)](#构建生产镜像非固定版本)
-    - [构建生产镜像(固定版本)](#构建生产镜像固定版本)
+    - [构建生产镜像](#构建生产镜像)
+    - [构建自定义APP镜像](#构建自定义app镜像)
   - [部署](#部署)
     - [Docker Compose 单机部署](#docker-compose-单机部署)
       - [准备部署目录](#准备部署目录)
@@ -86,14 +86,11 @@
 >     命令：
 >       help                    帮助
 >       base [选项]             构建基础镜像
->       builder [选项]          构建builder镜像
->       backend [选项]          构建后端镜像。该命令将基于最新的代码进行构建镜像，该操作将
->                               无法固定Frappe、ERPNext的版本。
->       builder-oob [选项]      构建builder-oob镜像。该命令用于构建指定版本的基础镜像，并
->                               用于后续基于该镜像快速构建自定义镜像，该操作可固定Frappe、
->                               ERPNext的版本。
->       custom [选项]           构建自定义APP镜像。在基于builder-oob命令构建出来的镜像的
->                               基础上添加自定以APP。
+>       builder [选项]          构建Builder镜像
+>       erpnext [选项]          构建指定版本的ERPNext镜像，该镜像已包含ERRNext、
+>                               ERPNext Chinese、ERPNext OOB，可直接部署使用。
+>       custom [选项]           构建自定义APP镜像。在基于erpnext命令构建出来的镜像的
+>                               基础上添加自定义APP。
 >       [镜像] [-h | --help]    镜像构建帮助
 >       get-default             查看当前构建默认值
 >       set-default [选项]      设置构建默认值
@@ -162,37 +159,7 @@
     ./build.sh builder
     ```
 
-### 构建生产镜像(非固定版本)
-
-1. 配置`apps.json`
-   
-   `apps.json`文件用于构建生产镜像时安装指定的应用，您可以根据自己的需求增加应用
-
-   **注意：** 请确认应用的版本分支，一般情况下应该与Frappe框架的版本一致。
-   ```json
-    [
-      {
-        "url": "https://gitee.com/mirrors/erpnext.git",
-        "branch": "version-15"
-      },
-      {
-        "url": "https://gitee.com/yuzelin/erpnext_chinese.git",
-        "branch": "master"
-      },
-      {
-        "url": "https://gitee.com/yuzelin/erpnext_oob.git",
-        "branch": "version-15"
-      }
-    ]
-   ```
-
-2. 构建并推送生产镜像
-    ```shell
-    ./build.sh backend
-    ```
-    > 该命令会产生镜像`{$registry}/{$namespace}/erp:{$main_version}.{$(date '+%y%m%d')}`，镜像版本由Frappe框架版本及构建日期组成，如：`ccr.ccs.tencentyun.com/vnimy/erp:version-15.231106`。
-
-### 构建生产镜像(固定版本)
+### 构建生产镜像
 
 1. 设置默认值
    由于基础镜像包含Frappe、ERPNext、ERPNext Chinese、ERPNext OOB等应用，因此需要提前设置好这些应用的仓库地址以及版本信息
@@ -207,15 +174,22 @@
       erpnext_oob_repo=https://gitee.com/yuzelin/erpnext_oob.git
     ```
 
-2. 构建自定义镜像基础镜像
+2. 构建镜像
     ```shell
-    ./build.sh builder-oob
+    ./build.sh erpnext
     ```
 
-    > 该命令构建并推送镜像`{$registry}/{$namespace}/frappe-builder-oob:{$main_version}.{$(date '+%y%m%d')}`
-    如：ccr.ccs.tencentyun.com/vnimy/frappe-builder-oob:version-15.231106
+    > 该命令构建并推送镜像`{$registry}/{$namespace}/erpnext:{$main_version}.{$(date '+%y%m%d')}`
+    如：ccr.ccs.tencentyun.com/vnimy/erpnext:version-15.241226
 
-3. 准备构建配置
+### 构建自定义APP镜像
+
+1. [准备生产镜像](#构建生产镜像)
+   自定义镜像基于之前构建的生产镜像来安装自定已APP，因此需要提前准备好生产镜像；
+   如果之前有构建过生产镜像，可跳过此步骤；
+   如果需要更新生产镜像版本，请重新构建生产镜像；
+
+2. 准备构建配置
     在项目目录中创建文件`custom.txt`，并确保有以下内容
     ```
     app-name-1,app-repo-1,app-branch
@@ -230,15 +204,15 @@
     设置默认基础镜像版本：
     **注意：** 版本为上一步构建的版本，如果不需要基于更新的基础版本，可以不更改改默认值
     ```shell
-    ./build.sh set-default custom_main_version=version-15.231106
+    ./build.sh set-default custom_main_version=version-15.241226
     ```
 
-4. 构建自定义APP镜像
+3. 构建自定义APP镜像
     执行构建命令：
     ```shell
     ./build.sh custom
     ```
-    > 该命令会产生镜像`{$registry}/{$namespace}/erp:{$custom_main_version}.{$(date '+%y%m%d')}`，镜像版本由自定义镜像主版本及构建日期组成，如：`ccr.ccs.tencentyun.com/vnimy/erp:version-15.231106.231213`。
+    > 该命令会产生镜像`{$registry}/{$namespace}/erp:{$custom_main_version}.{$(date '+%y%m%d')}`，镜像版本由自定义镜像主版本及构建日期组成，如：`ccr.ccs.tencentyun.com/vnimy/erp:version-15.241226.241227`。
 
 ## 部署
 
@@ -588,7 +562,7 @@ j2xtpotdsmp4   erp_websocket        replicated   3/3        ccr.ccs.tencentyun.c
   **注意：** 只能使用**MariaDB**
 
 ## 特别感谢
-感谢[余则霖](https://gitee.com/yuzelin)对ERPNext本地化的贡献，基于此将[界面汉化](https://gitee.com/yuzelin/erpnext_chinese)及[开箱即用](https://gitee.com/yuzelin/erpnext_oob)应用默认添加到builder-oob基础镜像中。
+感谢[余则霖](https://gitee.com/yuzelin)对ERPNext本地化的贡献，基于此将[界面汉化](https://gitee.com/yuzelin/erpnext_chinese)及[开箱即用](https://gitee.com/yuzelin/erpnext_oob)应用默认添加到erpnext生产镜像中。
 
 ## 相关链接
 - Frappe Framework https://frappeframework.com
