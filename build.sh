@@ -6,13 +6,14 @@ set -e
 DEFAULT_REGISTRY=ccr.ccs.tencentyun.com
 DEFAULT_NAMESPACE=vnimy
 DEFAULT_MAIN_VERSION=version-15
-# 默认自定镜像主版本
-DEFAULT_CUSTOM_MAIN_VERSION=version-15
 DEFAULT_FRAPPE_REPO=https://gitee.com/mirrors/frappe.git
 DEFAULT_ERPNEXT_REPO=https://gitee.com/mirrors/erpnext.git
 DEFAULT_ERPNEXT_CHINESE_REPO=https://gitee.com/yuzelin/erpnext_chinese.git
 DEFAULT_ERPNEXT_OOB_REPO=https://gitee.com/yuzelin/erpnext_oob.git
-DEFAULT_IMAGE_NAME=erp
+# 默认自定镜像名称
+DEFAULT_CUSTOM_IMAGE_NAME=erp
+# 默认自定镜像的基础版本
+DEFAULT_CUSTOM_MAIN_VERSION=version-15
 
 set -a # automatically export all variables
   if [ -f .env ]; then
@@ -97,8 +98,10 @@ function show_custom_usage() {
       -r,--registry [registry]          镜像注册中心，默认：$DEFAULT_REGISTRY
       -n,--namespace [namespace]        镜像注册中心的命名空间，默认：$DEFAULT_NAMESPACE
       -v,--version [version]            基础镜像版本，默认：$DEFAULT_CUSTOM_MAIN_VERSION
-      -i,--image [name]                 镜像名称，不包含标签，默认：$DEFAULT_NAMESPACE/$DEFAULT_IMAGE_NAME
+      -i,--image [name]                 镜像名称，不包含标签，默认：$DEFAULT_NAMESPACE/$DEFAULT_CUSTOM_IMAGE_NAME
       -t,--tag [name]                   镜像标签，默认：$DEFAULT_CUSTOM_MAIN_VERSION.$(date '+%y%m%d')
+      -s,--suffix [suffix_name]         custom文件后缀(custom.txt_[suffix_name])，用于区分多个自定义app的镜像，
+                                        如果希望不同的镜像使用不同的app来构建，可使用该参数。
       -f,--app-file [file]              自定义应用配置文件，一行一个APP，该配置优先于app-branch,app-repo,app-name参数
                                         例子 custom.txt：
                                             app-name1,app-repo1,app-branch1
@@ -332,7 +335,7 @@ function build_custom() {
   DATE_VERSION=$(date '+%y%m%d%H%M')
   TAG=$MAIN_VERSION.$DATE_VERSION
   NAMESPACE=$DEFAULT_NAMESPACE
-  IMAGE_NAME=$NAMESPACE/$DEFAULT_IMAGE_NAME
+  IMAGE_NAME=$NAMESPACE/$DEFAULT_CUSTOM_IMAGE_NAME
   REGISTRY=$DEFAULT_REGISTRY
 
   CUSTOM_APP_BRANCH=master
@@ -340,8 +343,10 @@ function build_custom() {
   CUSTOM_APP_NAME=""
   CUSTOM_APPS=""
 
+  CUSTOM_FILE="custom.txt"
 
-  ARGS=`getopt -o hr:n:i:t:v:f: -al help,registry:,namespace:,image:,tag:,version:,app-branch:,app-repo:,app-name:,app-file: -- "$@"`
+
+  ARGS=`getopt -o hr:n:i:t:v:f:s: -al help,registry:,namespace:,image:,tag:,version:,app-branch:,app-repo:,app-name:,app-file:,suffix: -- "$@"`
   if [ $? != 0 ];then
     echo "Terminating..."
     exit 1
@@ -391,6 +396,12 @@ function build_custom() {
         fi
         shift 2
         ;;
+      -s|--suffix)
+        if [ -n $2 ]; then
+          CUSTOM_FILE="${CUSTOM_FILE}_$2"
+        fi
+        shift 2
+        ;;
       -h|--help)
         show_custom_usage
         exit 0
@@ -408,10 +419,14 @@ function build_custom() {
   if [ ! -n "${CUSTOM_APPS}" ]; then
     if [ -n "${CUSTOM_APP_REPO}" ]; then
       CUSTOM_APPS="${CUSTOM_APP_NAME},${CUSTOM_APP_REPO},${CUSTOM_APP_BRANCH:-"master"}"
-    elif [ -e "custom.txt" ]; then
-      CUSTOM_APPS=$(cat "custom.txt" | grep -v "#")
+    elif [ -e "${CUSTOM_FILE}" ]; then
+      CUSTOM_APPS=$(cat "${CUSTOM_FILE}" | grep -v "#")
     fi
   fi
+
+  echo $CUSTOM_FILE
+  echo $CUSTOM_APPS
+  exit 0
 
   IMAGE=${REGISTRY}/${IMAGE_NAME}:${TAG}
   echo "开始构建镜像：$IMAGE"
