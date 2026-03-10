@@ -11,9 +11,9 @@ RUN \
   # 设置pip镜像源
   mkdir ~/.pip \
   && echo '[global]' > ~/.pip/pip.conf \
-  && echo 'index-url = https://pypi.tuna.tsinghua.edu.cn/simple' >> ~/.pip/pip.conf \
+  && echo 'index-url = https://mirrors.cloud.tencent.com/pypi/simple/' >> ~/.pip/pip.conf \
   && echo '[install]' >> ~/.pip/pip.conf \
-  && echo 'trusted-host = https://pypi.tuna.tsinghua.edu.cn' >> ~/.pip/pip.conf \
+  && echo 'trusted-host = https://mirrors.cloud.tencent.com' >> ~/.pip/pip.conf \
   # 安装自定义应用
   && cd /home/frappe/frappe-bench \
   && if [ -n "${CUSTOM_APPS}" ]; then \

@@ -1,4 +1,6 @@
 dist
 .env
+.env_*
 custom.txt
+custom.txt_*
 k8s/erpnext-*.tgz
