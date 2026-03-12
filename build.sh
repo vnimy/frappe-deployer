@@ -424,10 +424,6 @@ function build_custom() {
     fi
   fi
 
-  echo $CUSTOM_FILE
-  echo $CUSTOM_APPS
-  exit 0
-
   IMAGE=${REGISTRY}/${IMAGE_NAME}:${TAG}
   echo "开始构建镜像：$IMAGE"
   docker build \
