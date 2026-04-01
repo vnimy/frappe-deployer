@@ -3,6 +3,8 @@
 # 脚本报错即刻退出
 set -e
 
+
+
 DEFAULT_REGISTRY=ccr.ccs.tencentyun.com
 DEFAULT_NAMESPACE=vnimy
 DEFAULT_MAIN_VERSION=version-15
@@ -14,6 +16,10 @@ DEFAULT_ERPNEXT_OOB_REPO=https://gitee.com/yuzelin/erpnext_oob.git
 DEFAULT_CUSTOM_IMAGE_NAME=erp
 # 默认自定镜像的基础版本
 DEFAULT_CUSTOM_MAIN_VERSION=version-15
+
+BASE_PYTHON_VERSION=3.11.6
+BASE_NODE_VERSION=18.18.2
+BASE_VERSION=latest
 
 set -a # automatically export all variables
   if [ -f .env ]; then
@@ -114,6 +120,8 @@ function show_custom_usage() {
 function build_base() {
   NAMESPACE=$DEFAULT_NAMESPACE
   REGISTRY=$DEFAULT_REGISTRY
+  PYTHON_VERSION=$BASE_PYTHON_VERSION
+  NODE_VERSION=$BASE_NODE_VERSION
 
   ARGS=`getopt -o hr:n: -al help,registry:,namespace: -- "$@"`
   if [ $? != 0 ];then
@@ -149,15 +157,16 @@ function build_base() {
         ;;
   esac done
 
-  IMAGE=${REGISTRY}/$NAMESPACE/frappe-base:latest
+  IMAGE=${REGISTRY}/$NAMESPACE/frappe-base:${BASE_VERSION:-"latest"}
   echo "开始构建镜像：$IMAGE"
 
   docker build \
     --build-arg=DOCKER_REGISTRY=$REGISTRY \
     --build-arg=DOCKER_NAMESPACE=$NAMESPACE \
+    --build-arg=PYTHON_VERSION=$PYTHON_VERSION \
+    --build-arg=NODE_VERSION=$NODE_VERSION \
     --tag=$IMAGE \
     --file=Dockerfile.base .
-  docker push $IMAGE
 
   echo "构建完成"
 
@@ -205,15 +214,15 @@ function build_builder() {
         ;;
   esac done
 
-  IMAGE=${REGISTRY}/$NAMESPACE/frappe-builder:latest
+  IMAGE=${REGISTRY}/$NAMESPACE/frappe-builder:${BASE_VERSION:-"latest"}
   echo "开始构建镜像：$IMAGE"
 
   docker build \
     --build-arg=DOCKER_REGISTRY=$REGISTRY \
     --build-arg=DOCKER_NAMESPACE=$NAMESPACE \
+    --build-arg=BASE_VERSION=$BASE_VERSION \
     --tag=$IMAGE \
     --file=Dockerfile.builder .
-  docker push $IMAGE
 
   echo "构建完成"
 
@@ -310,6 +319,7 @@ function build_erpnext() {
   docker build \
     --build-arg=DOCKER_REGISTRY=$REGISTRY \
     --build-arg=DOCKER_NAMESPACE=$NAMESPACE \
+    --build-arg=BASE_VERSION=$BASE_VERSION \
     --build-arg=FRAPPE_REPO=$FRAPPE_REPO \
     --build-arg=FRAPPE_BRANCH=$FRAPPE_BRANCH \
     --build-arg=ERPNEXT_REPO=$ERPNEXT_REPO \
@@ -420,8 +430,10 @@ function build_custom() {
     if [ -n "${CUSTOM_APP_REPO}" ]; then
       CUSTOM_APPS="${CUSTOM_APP_NAME},${CUSTOM_APP_REPO},${CUSTOM_APP_BRANCH:-"master"}"
     elif [ -e "${CUSTOM_FILE}" ]; then
+      echo "使用自定义APP列表文件：$CUSTOM_FILE"
       CUSTOM_APPS=$(cat "${CUSTOM_FILE}" | grep -v "#")
     fi
+    echo $CUSTOM_APPS
   fi
 
   IMAGE=${REGISTRY}/${IMAGE_NAME}:${TAG}

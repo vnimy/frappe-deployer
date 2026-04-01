@@ -1,6 +1,7 @@
 ARG DOCKER_REGISTRY=ccr.ccs.tencentyun.com
 ARG DOCKER_NAMESPACE=vnimy
-FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-builder:latest as builder
+ARG BASE_VERSION=latest
+FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-builder:${BASE_VERSION} AS builder
 
 USER frappe
 
@@ -37,7 +38,7 @@ RUN \
   find apps -mindepth 1 -path "*/.git" | xargs rm -fr
 
 
-FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-base:latest as erpnext
+FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-base:${BASE_VERSION} AS erpnext
 
 COPY resources/nginx-template.conf /templates/nginx/frappe.conf.template
 COPY resources/entrypoints /usr/local/bin

@@ -1,6 +1,7 @@
 ARG DOCKER_REGISTRY=ccr.ccs.tencentyun.com
 ARG DOCKER_NAMESPACE=vnimy
-FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-base:latest AS builder
+ARG BASE_VERSION=latest
+FROM ${DOCKER_REGISTRY}/${DOCKER_NAMESPACE}/frappe-base:${BASE_VERSION} AS builder
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
